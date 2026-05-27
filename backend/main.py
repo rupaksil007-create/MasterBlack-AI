@@ -1,7 +1,16 @@
+import logging
+
+# Configure logging at the absolute top
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(message)s",
+)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.api.v1.api import api_router
+from backend.app.sandbox.docker_manager import sandbox_manager
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

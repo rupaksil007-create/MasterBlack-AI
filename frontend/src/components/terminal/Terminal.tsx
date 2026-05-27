@@ -9,6 +9,7 @@ import { Terminal as TerminalIcon } from 'lucide-react';
 export const Terminal = () => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -26,17 +27,32 @@ export const Terminal = () => {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
-    fitAddon.fit();
+    
+    xtermRef.current = term;
+    fitAddonRef.current = fitAddon;
+
+    // Helper to fit terminal with safety checks
+    const safeFit = () => {
+      try {
+        if (terminalRef.current && terminalRef.current.clientWidth > 0) {
+          fitAddon.fit();
+        }
+      } catch (err) {
+        console.warn('Terminal fit failed:', err);
+      }
+    };
+
+    // Initial fit with a small delay
+    const timer = setTimeout(safeFit, 100);
 
     term.writeln('\x1b[32mWelcome to MasterBlack AI Terminal\x1b[0m');
     term.write('\x1b[34m$ \x1b[0m');
 
-    xtermRef.current = term;
-
-    const handleResize = () => fitAddon.fit();
+    const handleResize = () => safeFit();
     window.addEventListener('resize', handleResize);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
       term.dispose();
     };

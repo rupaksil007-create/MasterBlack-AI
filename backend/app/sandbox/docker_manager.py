@@ -1,5 +1,6 @@
 import docker
 import logging
+import os
 from typing import Dict, Any, Optional
 from backend.app.core.config import settings
 
@@ -7,10 +8,28 @@ logger = logging.getLogger(__name__)
 
 class SandboxManager:
     def __init__(self):
+        self.client = None
+        
+        # 🛡️ THE FIX: Hardcode the unix socket and bypass environment detection
+        # This prevents the "http+docker" scheme error caused by mangled DOCKER_HOST values.
         try:
-            self.client = docker.DockerClient(base_url="unix:///var/run/docker.sock")
+            # Clear any problematic vars that cause scheme resolution issues
+            for key in ["DOCKER_HOST", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "DOCKER_URL"]:
+                os.environ.pop(key, None)
+
+            # Use the absolute most direct path for Linux sockets in Docker-in-Docker
+            socket_path = "unix:///var/run/docker.sock"
+            print(f"DEBUG: Initializing Docker client with {socket_path}")
+            self.client = docker.DockerClient(base_url=socket_path)
+            
+            # Immediate check
+            self.client.ping()
+            print(f"DEBUG: Docker client initialized successfully via {socket_path}")
+            logger.info(f"Docker client initialized successfully via {socket_path}")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize Docker client: {e}")
+            print(f"DEBUG: FATAL Docker initialization failed: {e}")
+            logger.error(f"FATAL: Docker initialization failed: {e}")
             self.client = None
 
     def create_sandbox(self, session_id: str) -> Optional[str]:
@@ -26,17 +45,17 @@ class SandboxManager:
             try:
                 container = self.client.containers.get(container_name)
                 return container.id
-            except docker.errors.NotFound:
+            except Exception:
                 pass
 
             container = self.client.containers.run(
                 settings.SANDBOX_DOCKER_IMAGE,
                 detach=True,
                 name=container_name,
-                network_mode="none",  # Isolate from network by default
+                network_mode="none",
                 mem_limit="512m",
-                cpu_quota=50000,      # 50% of one CPU
-                user="devuser",       # Run as non-root
+                cpu_quota=50000,
+                user="devuser",
                 volumes={
                     f"{settings.WORKSPACE_ROOT}/{session_id}": {
                         "bind": "/home/devuser/workspace",
