@@ -1,0 +1,11 @@
+.git
+.gitignore
+.dockerignore
+**/__pycache__
+**/.pytest_cache
+**/.next
+**/node_modules
+backend/.pytest_cache
+backend/__pycache__
+frontend/.next
+frontend/node_modules
