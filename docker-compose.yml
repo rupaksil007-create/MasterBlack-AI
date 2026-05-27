@@ -34,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    restart: always
     volumes:
       - ./frontend:/app/frontend
       - /app/frontend/node_modules
@@ -41,6 +42,7 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NODE_OPTIONS=--max-old-space-size=4096
     depends_on:
       - backend
 
